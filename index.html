@@ -92,12 +92,25 @@ section.scene.on{opacity:1;pointer-events:auto}
 #again{position:fixed;z-index:20;border:0;cursor:pointer;color:var(--muted);background:rgba(255,255,255,.08);border-radius:999px;font:500 12px var(--font-ui);padding:8px 14px;backdrop-filter:blur(4px)}
 #again{right:max(16px,env(safe-area-inset-right,0px));top:calc(14px + env(safe-area-inset-top,0px));display:none}
 #again.on{display:block}
+
+/* Music Control Button */
+#music-btn{position:fixed;z-index:20;left:max(16px,env(safe-area-inset-left,0px));top:calc(14px + env(safe-area-inset-top,0px));
+  border:0;cursor:pointer;color:var(--gold);background:rgba(255,255,255,.1);border-radius:999px;width:36px;height:36px;
+  display:grid;place-items:center;font-size:16px;backdrop-filter:blur(4px);transition:transform .3s,background .3s}
+#music-btn.playing{animation:spin 4s linear infinite;background:rgba(232,116,154,.3)}
+@keyframes spin{100%{transform:rotate(360deg)}}
+
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition-duration:.01s!important}}
 </style>
 
 <canvas id="bg"></canvas>
 <canvas id="fx"></canvas>
 <div id="photos"></div>
+
+<!-- Nút Bật/Tắt nhạc -->
+<button id="music-btn" type="button" aria-label="Bật/Tắt nhạc">🎵</button>
+<!-- Trình phát nhạc ẩn -->
+<audio id="bgm" loop preload="auto"></audio>
 
 <div id="stage">
   <header id="title"><p class="t1">Chúc mừng ngày 20/10</p><p class="t2">Chúc <span id="nm"></span> luôn hạnh phúc <span style="color:var(--gold)">♥</span></p></header>
@@ -138,15 +151,52 @@ section.scene.on{opacity:1;pointer-events:auto}
 
 <script>
 /* ---------- nội dung (chỉ chủ trang sửa ở đây) ---------- */
-const cfg={name:'Hoa',from:'từ Minh',pages:[
- 'Chúc em ngày 20/10 ngập tràn niềm vui!',
- 'Dù là 20/10 hay 365 ngày trong năm, anh vẫn luôn mong em bình an và hạnh phúc.']};
+const cfg={
+  name:'Bánh rán',
+  from:'từ Bánh cam',
+  // Nhập đường dẫn file nhạc của bạn vào đây (ví dụ: 'music.mp3' hoặc link online)
+  bgm:'music.mp3', 
+  pages:[
+   'Chúc em ngày 20/10 ngập tràn niềm vui!',
+   'Dù là 20/10 hay 365 ngày trong năm, anh vẫn luôn mong em bình an và hạnh phúc.'
+  ]
+};
 /* Ảnh kỷ niệm: dán đường dẫn data:image/jpeg;base64,... vào đây. Để trống sẽ dùng ảnh mẫu. */
 const userPhotos=['nhi.jpg', 'nhi2.jpg', 'nhi3.jpg', 'nhi4.jpg'];
 
 const $=s=>document.querySelector(s), sleep=ms=>new Promise(r=>setTimeout(r,ms));
 const rnd=(a,b)=>a+Math.random()*(b-a);
 const reduce=matchMedia('(prefers-reduced-motion:reduce)').matches;
+
+/* ---------- music player logic ---------- */
+const audio=$('#bgm'), musicBtn=$('#music-btn');
+let isPlaying=false;
+
+function initAudio(){
+  if(cfg.bgm){
+    audio.src=cfg.bgm;
+  }
+}
+
+function toggleMusic(){
+  if(isPlaying){
+    audio.pause();
+    musicBtn.classList.remove('playing');
+    musicBtn.textContent='🔇';
+    isPlaying=false;
+  }else{
+    audio.play().then(()=>{
+      musicBtn.classList.add('playing');
+      musicBtn.textContent='🎵';
+      isPlaying=true;
+    }).catch(e=>console.log("Cần tương tác để phát nhạc:", e));
+  }
+}
+
+musicBtn.addEventListener('click', (e)=>{
+  e.stopPropagation();
+  toggleMusic();
+});
 
 /* ---------- background: bokeh + twinkling stars ---------- */
 const bg=$('#bg'),bx=bg.getContext('2d');let W,H,DPR=Math.min(devicePixelRatio||1,2),bokeh=1,stars=[],orbs=[];
@@ -333,7 +383,9 @@ const scenes=['intro','bouquet','msg','env','letter'];
 function show(n){scenes.forEach(s=>$('#s-'+s).classList.toggle('on',s===n))}
 function applyCfg(){$('#nm').textContent=cfg.name;$('#from').innerHTML='<br>'+cfg.from.replace(/</g,'&lt;')}
 let busy=false;
-async function startFlow(){if(busy)return;busy=true;
+async function startFlow(){
+  if(!isPlaying) toggleMusic(); // Tự động bật nhạc khi bắt đầu chạm
+  if(busy)return;busy=true;
   bokeh=.45;$('#title').classList.add('on');show('bouquet');await sleep(1000);
   await trail($('#bq').getBoundingClientRect());$('#bq').classList.add('rev');await sleep(900);$('#s-bouquet').classList.add('shown');await sleep(500);busy=false}
 $('#s-intro').addEventListener('click',startFlow);
@@ -372,6 +424,7 @@ $('#again').addEventListener('click',()=>{show('env')});
 document.querySelectorAll('.veil').forEach(v=>v.addEventListener('click',e=>{if(e.target===v)v.classList.remove('on')}));
 addEventListener('keydown',e=>{if(e.key==='Escape')document.querySelectorAll('.veil.on').forEach(v=>v.classList.remove('on'))});
 
+initAudio();
 applyCfg();
 </script>
 
